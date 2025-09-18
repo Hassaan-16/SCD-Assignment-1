@@ -2,6 +2,8 @@ SCD-Assignment-1
 
 run with : "java ProjectPlanner"
 
+creates files in the active directory
+
 alternatively use;
 
 java -cp classes ProjectPlanner
