@@ -1,200 +1,404 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
-import java.util.Map;
-import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
-public class ProjectPlanningGUI extends JFrame {
-    private ProjectPlanner projectPlanner;
-    private Project project;
-    private JTable taskTable;
-    private TaskTableModel taskTableModel;
-    private JTextField projectNameField;
-    private JTextArea analysisArea;
-
-    public ProjectPlanningGUI() {
-        this.projectPlanner = new ProjectPlanner();
-        this.project = new Project();
-        initializeUI();
-    }
-
-    private void initializeUI() {
-        setTitle("Project Planning Application - Assignment 2");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1400, 800);
-        setLocationRelativeTo(null);
-
-        // Create main panel with border layout
-        JPanel mainPanel = new JPanel(new BorderLayout());
-
-        // Create toolbar
-        JToolBar toolBar = createToolBar();
-        mainPanel.add(toolBar, BorderLayout.NORTH);
-
-        // Create project info panel
-        JPanel projectPanel = createProjectPanel();
-        mainPanel.add(projectPanel, BorderLayout.NORTH);
-
-        // Create center panel with table and analysis
-        JSplitPane centerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        centerSplitPane.setDividerLocation(800);
-
-        // Task table
-        taskTableModel = new TaskTableModel(project);
-        taskTable = new JTable(taskTableModel);
-        JScrollPane tableScrollPane = new JScrollPane(taskTable);
-        centerSplitPane.setLeftComponent(tableScrollPane);
-
-        // Analysis area
-        analysisArea = new JTextArea();
-        analysisArea.setEditable(false);
-        analysisArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        JScrollPane analysisScrollPane = new JScrollPane(analysisArea);
-        analysisScrollPane.setBorder(BorderFactory.createTitledBorder("Analysis Results"));
-        centerSplitPane.setRightComponent(analysisScrollPane);
-
-        mainPanel.add(centerSplitPane, BorderLayout.CENTER);
-
-        add(mainPanel);
-    }
-
-    private JToolBar createToolBar() {
-        JToolBar toolBar = new JToolBar();
-        toolBar.setFloatable(false);
-
-        JButton newButton = new JButton("New");
-        JButton saveButton = new JButton("Save");
-        JButton closeButton = new JButton("Close");
-        JButton uploadTasksButton = new JButton("Upload Tasks");
-        JButton uploadResourcesButton = new JButton("Upload Resources");
-        JButton analyzeButton = new JButton("Analyze");
-        JButton visualizeButton = new JButton("Visualize");
-
-        // Add action listeners
-        newButton.addActionListener(e -> newProject());
-        saveButton.addActionListener(e -> saveProject());
-        closeButton.addActionListener(e -> closeProject());
-        uploadTasksButton.addActionListener(e -> uploadTasksFile());
-        uploadResourcesButton.addActionListener(e -> uploadResourcesFile());
-        analyzeButton.addActionListener(e -> showAnalysisDialog());
-        visualizeButton.addActionListener(e -> showVisualization());
-
-        toolBar.add(newButton);
-        toolBar.add(saveButton);
-        toolBar.add(closeButton);
-        toolBar.addSeparator();
-        toolBar.add(uploadTasksButton);
-        toolBar.add(uploadResourcesButton);
-        toolBar.addSeparator();
-        toolBar.add(analyzeButton);
-        toolBar.add(visualizeButton);
-
-        return toolBar;
-    }
-
-    private JPanel createProjectPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setBorder(BorderFactory.createTitledBorder("Project Information"));
-
-        panel.add(new JLabel("Project:"));
-        projectNameField = new JTextField("My Project", 20);
-        panel.add(projectNameField);
-
-        return panel;
-    }
-
-    private void newProject() {
-        project = new Project();
-        projectNameField.setText("New Project");
-        taskTableModel.setProject(project);
-        analysisArea.setText("");
-        JOptionPane.showMessageDialog(this, "New project created.");
-    }
-
-    private void saveProject() {
-        // Implementation for saving project data
-        JOptionPane.showMessageDialog(this, "Project saved successfully.");
-    }
-
-    private void closeProject() {
-        int result = JOptionPane.showConfirmDialog(this, 
-            "Are you sure you want to close the project?", "Close Project", 
-            JOptionPane.YES_NO_OPTION);
-        if (result == JOptionPane.YES_OPTION) {
-            newProject();
-        }
-    }
-
-    private void uploadTasksFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setCurrentDirectory(new File("."));
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            try {
-                project.loadTasks(file.getAbsolutePath());
-                taskTableModel.fireTableDataChanged();
-                JOptionPane.showMessageDialog(this, "Tasks uploaded successfully.");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error uploading tasks: " + ex.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    private void uploadResourcesFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setCurrentDirectory(new File("."));
-        int result = fileChooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            try {
-                project.loadResources(file.getAbsolutePath());
-                taskTableModel.fireTableDataChanged();
-                JOptionPane.showMessageDialog(this, "Resources uploaded successfully.");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error uploading resources: " + ex.getMessage(), 
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    private void showAnalysisDialog() {
-        AnalysisDialog dialog = new AnalysisDialog(this, project);
-        dialog.setVisible(true);
-        
-        // Update analysis area with results
-        if (dialog.getAnalysisResult() != null) {
-            analysisArea.setText(dialog.getAnalysisResult());
-        }
-    }
-
-    private void showVisualization() {
-        if (project.getTasks().isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
-                "No tasks to visualize. Please upload tasks first.", 
-                "No Data", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        
-        GanttChartDialog dialog = new GanttChartDialog(this, project);
-        dialog.setVisible(true);
-    }
-
+public class ProjectPlanner {
+    
+    // Main method to run the application
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeel());
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            Project project = new Project();
+            
+            // Load data from files
+            project.loadTasks("tasks.txt");
+            project.loadResources("resources.txt");
+            
+            System.out.println("Project Analysis Results:");
+            System.out.println("=".repeat(50));
+            
+            // 1. Project completion time and duration
+            System.out.println("1. Project Completion Time: " + project.getProjectCompletionTime());
+            System.out.printf("   Project Duration: %.2f hours (%.2f days)%n",
+                project.getProjectDurationInHours(),
+                project.getProjectDurationInHours() / 24);
+            System.out.println();
+            
+            // 2. Highlight overlapping tasks
+            System.out.println("2. Overlapping Tasks:");
+            project.findOverlappingTasks().forEach(overlap -> 
+                System.out.println("   - " + overlap));
+            if (project.findOverlappingTasks().isEmpty()) {
+                System.out.println("   No overlapping tasks found");
             }
-            new ProjectPlanningGUI().setVisible(true);
-        });
+            System.out.println();
+            
+            // 3. Find teams for each task
+            System.out.println("3. Teams for Each Task:");
+            project.getTasks().keySet().stream()
+                .sorted()
+                .forEach(taskId -> {
+                    Set<String> team = project.getTeamForTask(taskId);
+                    System.out.printf("   Task %d: %s%n", taskId, 
+                        team.isEmpty() ? "No team assigned" : String.join(", ", team));
+                });
+            System.out.println();
+            
+            // 4. Find total effort for each resource
+            System.out.println("4. Total Effort per Resource (hours):");
+            project.getResourceEffort().forEach((name, hours) -> 
+                System.out.printf("   %s: %.2f hours%n", name, hours));
+            
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
+
+// Project class - main container and manager
+class Project {
+    private final Map<Integer, Task> tasks = new HashMap<>();
+    private final Map<String, Resource> resources = new HashMap<>();
+    private final List<Allocation> allocations = new ArrayList<>();
+    
+    public void loadTasks(String filename) throws FileParseException {
+        List<String> lines = readLines(filename);
+        List<Task> taskList = new ArrayList<>();
+        
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (line.isEmpty()) continue;
+            
+            try {
+                Task task = parseTaskLine(line);
+                taskList.add(task);
+            } catch (Exception e) {
+                throw new FileParseException(
+                    String.format("Error parsing line %d: %s", i + 1, line), e);
+            }
+        }
+        
+        for (Task task : taskList) {
+            tasks.put(task.getId(), task);
+        }
+        
+        // Link dependency tasks
+        for (Task task : tasks.values()) {
+            for (int depId : task.getDependencyIds()) {
+                Task depTask = tasks.get(depId);
+                if (depTask != null) {
+                    task.addDependencyTask(depTask);
+                }
+            }
+        }
+    }
+    
+    public void loadResources(String filename) throws FileParseException {
+        List<String> lines = readLines(filename);
+        List<Resource> resourceList = new ArrayList<>();
+        
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (line.isEmpty()) continue;
+            
+            try {
+                Resource resource = parseResourceLine(line);
+                resourceList.add(resource);
+            } catch (Exception e) {
+                throw new FileParseException(
+                    String.format("Error parsing line %d: %s", i + 1, line), e);
+            }
+        }
+        
+        for (Resource resource : resourceList) {
+            resources.put(resource.getName(), resource);
+            
+            // Create allocation objects
+            for (Map.Entry<Integer, Integer> entry : resource.getAllocations().entrySet()) {
+                Task task = tasks.get(entry.getKey());
+                if (task != null) {
+                    allocations.add(new Allocation(resource, task, entry.getValue()));
+                }
+            }
+        }
+    }
+    
+    private Task parseTaskLine(String line) throws DateTimeParseException {
+        String[] parts = line.split(",");
+        if (parts.length < 4) {
+            throw new IllegalArgumentException("Invalid task format: " + line);
+        }
+        
+        int id = Integer.parseInt(parts[0].trim());
+        String title = parts[1].trim();
+        LocalDateTime startTime = parseDateTime(parts[2].trim());
+        LocalDateTime endTime = parseDateTime(parts[3].trim());
+        
+        List<Integer> dependencies = new ArrayList<>();
+        if (parts.length > 4) {
+            for (int i = 4; i < parts.length; i++) {
+                String dep = parts[i].trim();
+                if (!dep.isEmpty()) {
+                    dependencies.add(Integer.parseInt(dep));
+                }
+            }
+        }
+        
+        return new Task(id, title, startTime, endTime, dependencies);
+    }
+    
+    private Resource parseResourceLine(String line) {
+        String[] parts = line.split(",");
+        if (parts.length < 1) {
+            throw new IllegalArgumentException("Invalid resource format: " + line);
+        }
+        
+        String name = parts[0].trim();
+        Resource resource = new Resource(name);
+        
+        for (int i = 1; i < parts.length; i++) {
+            String allocation = parts[i].trim();
+            if (allocation.contains(":")) {
+                String[] allocationParts = allocation.split(":");
+                if (allocationParts.length == 2) {
+                    int taskId = Integer.parseInt(allocationParts[0].trim());
+                    int loadPercentage = Integer.parseInt(allocationParts[1].trim());
+                    resource.addAllocation(taskId, loadPercentage);
+                }
+            }
+        }
+        
+        return resource;
+    }
+    
+    private LocalDateTime parseDateTime(String dateTimeStr) throws DateTimeParseException {
+        Pattern DATE_PATTERN = Pattern.compile("\\d{8}\\+\\d{4}");
+        DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmm");
+        
+        if (!DATE_PATTERN.matcher(dateTimeStr).matches()) {
+            throw new DateTimeParseException("Invalid datetime format", dateTimeStr, 0);
+        }
+        
+        String normalized = dateTimeStr.replace("+", "");
+        return LocalDateTime.parse(normalized, FORMATTER);
+    }
+    
+    private List<String> readLines(String filename) throws FileParseException {
+        try {
+            return Files.readAllLines(Paths.get(filename));
+        } catch (IOException e) {
+            throw new FileParseException("Could not read file: " + filename, e);
+        }
+    }
+    
+    public LocalDateTime getProjectCompletionTime() {
+        return tasks.values().stream()
+            .map(Task::getEndTime)
+            .max(LocalDateTime::compareTo)
+            .orElse(null);
+    }
+    
+    public double getProjectDurationInHours() {
+        Optional<LocalDateTime> minStart = tasks.values().stream()
+            .map(Task::getStartTime)
+            .min(LocalDateTime::compareTo);
+        
+        Optional<LocalDateTime> maxEnd = tasks.values().stream()
+            .map(Task::getEndTime)
+            .max(LocalDateTime::compareTo);
+        
+        if (minStart.isPresent() && maxEnd.isPresent()) {
+            return java.time.Duration.between(minStart.get(), maxEnd.get()).toHours();
+        }
+        
+        return 0;
+    }
+    
+    public List<String> findOverlappingTasks() {
+        List<String> overlaps = new ArrayList<>();
+        
+        for (Task task : tasks.values()) {
+            for (Task depTask : task.getDependencyTasks()) {
+                if (task.overlapsWith(depTask)) {
+                    String overlap = String.format(
+                        "Task %d ('%s') overlaps with dependency Task %d ('%s')",
+                        task.getId(), task.getTitle(), depTask.getId(), depTask.getTitle()
+                    );
+                    overlaps.add(overlap);
+                }
+            }
+        }
+        
+        return overlaps;
+    }
+    
+    public Set<String> getTeamForTask(int taskId) {
+        return allocations.stream()
+            .filter(allocation -> allocation.getTask().getId() == taskId)
+            .map(allocation -> allocation.getResource().getName())
+            .collect(Collectors.toSet());
+    }
+    
+    public Map<String, Double> getResourceEffort() {
+        Map<String, Double> effort = new HashMap<>();
+        
+        for (Resource resource : resources.values()) {
+            effort.put(resource.getName(), resource.calculateTotalEffort(tasks));
+        }
+        
+        return effort;
+    }
+    
+    public Map<Integer, Task> getTasks() { return new HashMap<>(tasks); }
+    public Map<String, Resource> getResources() { return new HashMap<>(resources); }
+}
+
+// Task class
+class Task {
+    private final int id;
+    private final String title;
+    private final LocalDateTime startTime;
+    private final LocalDateTime endTime;
+    private final List<Integer> dependencyIds;
+    private final List<Task> dependencyTasks;
+    
+    public Task(int id, String title, LocalDateTime startTime, LocalDateTime endTime, List<Integer> dependencyIds) {
+        this.id = id;
+        this.title = title;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.dependencyIds = new ArrayList<>(dependencyIds);
+        this.dependencyTasks = new ArrayList<>();
+    }
+    
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public LocalDateTime getEndTime() { return endTime; }
+    public List<Integer> getDependencyIds() { return new ArrayList<>(dependencyIds); }
+    public List<Task> getDependencyTasks() { return new ArrayList<>(dependencyTasks); }
+    
+    public void addDependencyTask(Task task) {
+        if (!dependencyTasks.contains(task)) {
+            dependencyTasks.add(task);
+        }
+    }
+    
+    public double getDurationInHours() {
+        java.time.Duration duration = java.time.Duration.between(startTime, endTime);
+        return duration.toHours();
+    }
+    
+    public boolean overlapsWith(Task other) {
+        return startTime.isBefore(other.endTime) && other.startTime.isBefore(endTime);
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Task task = (Task) o;
+        return id == task.id;
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("Task %d: %s (%s to %s)", id, title, startTime, endTime);
+    }
+}
+
+// Resource class
+class Resource {
+    private final String name;
+    private final Map<Integer, Integer> allocations;
+    
+    public Resource(String name) {
+        this.name = name;
+        this.allocations = new HashMap<>();
+    }
+    
+    public String getName() { return name; }
+    public Map<Integer, Integer> getAllocations() { return new HashMap<>(allocations); }
+    
+    public void addAllocation(int taskId, int loadPercentage) {
+        allocations.put(taskId, loadPercentage);
+    }
+    
+    public double calculateTotalEffort(Map<Integer, Task> tasks) {
+        return allocations.entrySet().stream()
+            .mapToDouble(entry -> {
+                Task task = tasks.get(entry.getKey());
+                if (task != null) {
+                    return task.getDurationInHours() * (entry.getValue() / 100.0);
+                }
+                return 0;
+            })
+            .sum();
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Resource resource = (Resource) o;
+        return Objects.equals(name, resource.name);
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("Resource: %s", name);
+    }
+}
+
+// Allocation class (relationship between Resource and Task)
+class Allocation {
+    private final Resource resource;
+    private final Task task;
+    private final int loadPercentage;
+    
+    public Allocation(Resource resource, Task task, int loadPercentage) {
+        this.resource = resource;
+        this.task = task;
+        this.loadPercentage = loadPercentage;
+    }
+    
+    public Resource getResource() { return resource; }
+    public Task getTask() { return task; }
+    public int getLoadPercentage() { return loadPercentage; }
+    
+    public double getEffortHours() {
+        return task.getDurationInHours() * (loadPercentage / 100.0);
+    }
+    
+    @Override
+    public String toString() {
+        return String.format("%s -> %s (%d%%)", resource.getName(), task.getTitle(), loadPercentage);
+    }
+}
+
+// Custom exception class
+class FileParseException extends Exception {
+    public FileParseException(String message) {
+        super(message);
+    }
+    
+    public FileParseException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
