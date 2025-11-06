@@ -1,4 +1,5 @@
-// GanttChartDialog.java
+package GUI;
+
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;

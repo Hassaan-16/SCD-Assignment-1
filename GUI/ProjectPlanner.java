@@ -1,3 +1,5 @@
+package GUI;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -15,11 +17,28 @@ public class ProjectPlanner {
         try {
             Project project = new Project();
             
-            // Load data from files
-            project.loadTasks("tasks.txt");
-            project.loadResources("resources.txt");
+            // Try to find files in different locations
+            String tasksFile = findFile("tasks.txt");
+            String resourcesFile = findFile("resources.txt");
             
-            System.out.println("Project Analysis Results:");
+            if (tasksFile == null) {
+                System.err.println("ERROR: Could not find tasks.txt file!");
+                System.err.println("Looking in: " + System.getProperty("user.dir"));
+                return;
+            }
+            if (resourcesFile == null) {
+                System.err.println("ERROR: Could not find resources.txt file!");
+                System.err.println("Looking in: " + System.getProperty("user.dir"));
+                return;
+            }
+            
+            System.out.println("Loading tasks from: " + tasksFile);
+            project.loadTasks(tasksFile);
+            
+            System.out.println("Loading resources from: " + resourcesFile);
+            project.loadResources(resourcesFile);
+            
+            System.out.println("\nProject Analysis Results:");
             System.out.println("=".repeat(50));
             
             // 1. Project completion time and duration
@@ -31,10 +50,12 @@ public class ProjectPlanner {
             
             // 2. Highlight overlapping tasks
             System.out.println("2. Overlapping Tasks:");
-            project.findOverlappingTasks().forEach(overlap -> 
-                System.out.println("   - " + overlap));
-            if (project.findOverlappingTasks().isEmpty()) {
+            List<String> overlappingTasks = project.findOverlappingTasks();
+            if (overlappingTasks.isEmpty()) {
                 System.out.println("   No overlapping tasks found");
+            } else {
+                overlappingTasks.forEach(overlap -> 
+                    System.out.println("   - " + overlap));
             }
             System.out.println();
             
@@ -51,13 +72,43 @@ public class ProjectPlanner {
             
             // 4. Find total effort for each resource
             System.out.println("4. Total Effort per Resource (hours):");
-            project.getResourceEffort().forEach((name, hours) -> 
-                System.out.printf("   %s: %.2f hours%n", name, hours));
+            Map<String, Double> effort = project.getResourceEffort();
+            if (effort.isEmpty()) {
+                System.out.println("   No resource effort data available");
+            } else {
+                effort.forEach((name, hours) -> 
+                    System.out.printf("   %s: %.2f hours%n", name, hours));
+            }
+            
+            // Debug information
+            System.out.println();
+            System.out.println("Debug Information:");
+            System.out.println("Total tasks loaded: " + project.getTasks().size());
+            System.out.println("Total resources loaded: " + project.getResources().size());
             
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+    
+    private static String findFile(String filename) {
+        // Check current directory
+        if (Files.exists(Paths.get(filename))) {
+            return filename;
+        }
+        
+        // Check in parent directory
+        if (Files.exists(Paths.get("../" + filename))) {
+            return "../" + filename;
+        }
+        
+        // Check in GUI directory
+        if (Files.exists(Paths.get("GUI/" + filename))) {
+            return "GUI/" + filename;
+        }
+        
+        return null;
     }
 }
 
@@ -97,6 +148,8 @@ class Project {
                 }
             }
         }
+        
+        System.out.println("Successfully loaded " + tasks.size() + " tasks");
     }
     
     public void loadResources(String filename) throws FileParseException {
@@ -127,6 +180,8 @@ class Project {
                 }
             }
         }
+        
+        System.out.println("Successfully loaded " + resources.size() + " resources");
     }
     
     private Task parseTaskLine(String line) throws DateTimeParseException {
@@ -257,6 +312,7 @@ class Project {
     
     public Map<Integer, Task> getTasks() { return new HashMap<>(tasks); }
     public Map<String, Resource> getResources() { return new HashMap<>(resources); }
+    public List<Allocation> getAllocations() { return new ArrayList<>(allocations); }
 }
 
 // Task class
@@ -401,4 +457,14 @@ class FileParseException extends Exception {
     public FileParseException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    
+ public static void main(String[] args) {
+        // Launch GUI immediately
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            new ProjectPlanningGUI().setVisible(true);
+        });
+    }
 }
+
+

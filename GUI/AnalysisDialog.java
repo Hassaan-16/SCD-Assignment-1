@@ -1,8 +1,7 @@
-// AnalysisDialog.java
+package GUI;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;

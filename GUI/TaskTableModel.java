@@ -1,9 +1,9 @@
-// TaskTableModel.java
+package GUI;
+
 import javax.swing.table.AbstractTableModel;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
-import java.util.Map;
 
 public class TaskTableModel extends AbstractTableModel {
     private Project project;
